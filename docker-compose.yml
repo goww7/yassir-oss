@@ -1,0 +1,18 @@
+services:
+  yassir:
+    build: .
+    container_name: yassir
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    volumes:
+      - yassir-data:/app/.yassir
+      - yassir-agents:/app/.agents
+    restart: unless-stopped
+
+volumes:
+  yassir-data:
+  yassir-agents:

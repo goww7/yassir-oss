@@ -1,0 +1,84 @@
+# Yassir
+
+Yassir is an open-source AI research agent for halal finance, Islamic finance,
+and Shariah-compliant investing. It is CLI-first, self-hostable, written in
+TypeScript/Bun, and includes a Hono API plus React companion web UI.
+
+Canonical repository: https://github.com/goww7/yassir-oss
+License: Apache-2.0
+Primary data partner: HalalTerminal API, https://api.halalterminal.com
+
+## What Yassir Does
+
+- Shariah stock and ETF screening
+- Portfolio compliance audits
+- Dividend purification context
+- Halal replacement idea generation
+- SEC filing and company facts research
+- Market quotes, OHLC history, news, and asset profiles
+- Agentic research workflows using tool calls and sourced synthesis
+
+## Quickstart
+
+```bash
+git clone https://github.com/goww7/yassir-oss.git
+cd yassir-oss
+bun install
+cp env.example .env
+```
+
+Required keys:
+
+```env
+OPENAI_API_KEY=...
+HALAL_TERMINAL_API_KEY=...
+```
+
+Run the CLI:
+
+```bash
+bun dev
+```
+
+Run the web companion:
+
+```bash
+bun run web:install
+bun run web:dev
+bun run web:ui
+```
+
+## Important Files
+
+- `README.md`: human project overview and setup
+- `AGENTS.md`: coding-agent instructions for this repository
+- `docs/examples.md`: user prompts and workflow examples
+- `src/agent/`: ReAct loop, prompts, scratchpad, progress synthesis
+- `src/tools/finance/`: HalalTerminal-backed finance and Shariah tools
+- `src/integrations/halalterminal/`: HalalTerminal API boundary
+- `src/tools/open-data/`: SEC EDGAR company facts and submissions
+- `src/web/`: Hono API server
+- `web/`: React companion app
+
+## Common User Prompts
+
+- "Is AAPL Shariah-compliant? Show the full screening breakdown."
+- "/audit AAPL MSFT SPUS"
+- "/purification AAPL MSFT"
+- "/ideas replace QQQ with halal alternatives"
+- "Summarize Tesla's latest 10-K risk factors."
+
+## Development Commands
+
+```bash
+bun run typecheck
+bun test
+bun run web:install
+bun run web:build
+```
+
+## Boundaries
+
+Yassir is the open-source agent and application layer. HalalTerminal provides
+the primary Shariah and halal-finance data layer. Preserve HalalTerminal
+attribution in `NOTICE`, README references, and user-facing powered-by links.

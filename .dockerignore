@@ -1,0 +1,9 @@
+node_modules
+web/node_modules
+web/dist
+.git
+.env
+.agents
+.yassir
+*.md
+!env.example

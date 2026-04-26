@@ -1,0 +1,82 @@
+{
+  "name": "yassir",
+  "version": "2026.3.21",
+  "description": "Yassir - AI research agent for halal finance and Shariah-compliant investing.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/goww7/yassir-oss.git"
+  },
+  "bugs": {
+    "url": "https://github.com/goww7/yassir-oss/issues"
+  },
+  "keywords": [
+    "ai-agent",
+    "financial-research",
+    "langchain",
+    "bun",
+    "typescript",
+    "shariah",
+    "halal-finance",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "type": "module",
+  "main": "src/index.tsx",
+  "bin": {
+    "yassir": "./src/index.tsx"
+  },
+  "scripts": {
+    "start": "bun run src/index.tsx",
+    "dev": "bun --watch run src/index.tsx",
+    "web": "bun run src/web/index.ts",
+    "web:dev": "bun --watch run src/web/index.ts",
+    "web:ui": "cd web && bunx vite --port 5173",
+    "web:install": "cd web && bun install",
+    "web:build": "cd web && bunx vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "@langchain/anthropic": "^1.1.3",
+    "@langchain/core": "^1.1.0",
+    "@langchain/exa": "^1.0.1",
+    "@langchain/google-genai": "^2.0.0",
+    "@langchain/ollama": "^1.0.3",
+    "@langchain/openai": "^1.1.3",
+    "@langchain/tavily": "^1.0.1",
+    "@mariozechner/pi-tui": "^0.52.9",
+    "@mozilla/readability": "^0.6.0",
+"better-sqlite3": "^12.6.2",
+    "diff": "^8.0.3",
+    "dotenv": "^17.2.3",
+    "exa-js": "^2.2.0",
+    "fast-xml-parser": "^5.5.9",
+    "gray-matter": "^4.0.3",
+    "hono": "^4.12.9",
+    "jszip": "^3.10.1",
+    "langsmith": "^0.4.10",
+    "linkedom": "^0.18.12",
+    "mammoth": "^1.12.0",
+    "pdf-parse": "^2.4.5",
+    "playwright": "^1.52.0",
+"xlsx": "^0.18.5",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/bun": "latest",
+    "@types/jest": "^29.5.14",
+"babel-jest": "^30.2.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
