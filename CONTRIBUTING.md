@@ -4,7 +4,7 @@ Thanks for helping improve Yassir.
 
 ## Before you start
 
-- Search [existing issues](https://github.com/goww7/yassir/issues) to avoid duplicates.
+- Search [existing issues](https://github.com/goww7/yassir-oss/issues) to avoid duplicates.
 - For larger changes, open an issue first so we can align on direction.
 
 ## Development setup
