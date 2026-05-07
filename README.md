@@ -406,6 +406,17 @@ bun run web:build
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Related projects
+
+Other open-source tools in the HalalTerminal ecosystem — same API, different surfaces:
+
+| Project | What it is | License |
+|---|---|---|
+| [**halal-discord-bot**](https://github.com/goww7/halal-discord-bot) | Discord bot — `/halal AAPL`, `/portfolio`, `/trending` slash commands for Shariah-compliant screening | MIT |
+| [**halal-portfolio-tracker**](https://github.com/goww7/halal-portfolio-tracker) | Next.js 14 app — enter your holdings, get per-stock compliance + portfolio halal % + purification owed. One-click Vercel deploy. | MIT |
+| [**halal-pine**](https://github.com/goww7/halal-pine) | TradingView Pine Script v5 indicator that overlays compliance status on charts. Refreshed daily from the API. | MIT |
+| [**halalterminal-claude-skills**](https://github.com/goww7/halalterminal-claude-skills) | Claude Code plugin — Shariah screening skills usable directly from your terminal AI. | MIT |
+
 ## License
 
 [Apache License 2.0](LICENSE). See [NOTICE](NOTICE) for HalalTerminal attribution.
