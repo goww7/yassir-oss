@@ -765,3 +765,66 @@ export const regenerateKey = createTool(
       return { data: normalizeHalalData(response.data), url: response.url };
     },
 );
+
+export const revokeKey = createTool(
+  'revoke_key',
+  'Revoke the configured Halal Terminal API key. The key will stop working immediately and cannot be reactivated.',
+  z.object({
+    confirm: z
+      .boolean()
+      .describe('Must be true. Required to acknowledge the key will be permanently revoked.'),
+  }),
+  async (input) => {
+    if (!input.confirm) {
+      return {
+        data: {
+          error: 'revoke_key requires confirm=true to proceed. The action is irreversible.',
+        },
+      };
+    }
+    const response = await halalTerminalRequest('POST', '/api/keys/revoke', {
+      body: { api_key: getHalalTerminalApiKeyOrThrow() },
+      apiKey: '',
+    });
+    return { data: normalizeHalalData(response.data), url: response.url };
+  },
+);
+
+// =============================================================================
+// Predictive compliance insights — Yassir 2.0
+//
+// Three endpoints that turn the agent from a screener into a watchdog:
+//   - trajectory: XBRL-derived ratio history per methodology
+//   - staleness:  detects whether a cached screen is outdated relative to recent SEC filings
+//   - alternatives: halal substitutes for a non-compliant or drifting holding
+// =============================================================================
+
+export const getComplianceTrajectory = createTool(
+  'get_compliance_trajectory',
+  'Return the historical compliance-ratio trajectory (debt-to-MC, cash-and-securities, non-compliant income) for a symbol, derived from XBRL facts. Use to detect drift toward non-compliance before it happens.',
+  z.object({ symbol: symbolSchema }),
+  async (input) => {
+    const symbol = normalizeSymbol(input.symbol);
+    return halalGet(`/api/insights/${symbol}/trajectory`);
+  },
+);
+
+export const getScreeningStaleness = createTool(
+  'get_screening_staleness',
+  'Detect whether a cached Shariah screening result is stale, based on recent SEC filings (10-K/10-Q/8-K) since the last screen. Returns a re-screen recommendation.',
+  z.object({ symbol: symbolSchema }),
+  async (input) => {
+    const symbol = normalizeSymbol(input.symbol);
+    return halalGet(`/api/insights/${symbol}/staleness`);
+  },
+);
+
+export const getHalalAlternatives = createTool(
+  'get_halal_alternatives',
+  'Suggest halal-compliant alternatives for a non-compliant or drifting symbol, ranked by sector match, market cap, and methodology coverage.',
+  z.object({ symbol: symbolSchema }),
+  async (input) => {
+    const symbol = normalizeSymbol(input.symbol);
+    return halalGet(`/api/insights/${symbol}/alternatives`);
+  },
+);

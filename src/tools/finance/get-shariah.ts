@@ -74,6 +74,10 @@ import {
   removeWatchlistSymbol,
   createCheckout,
   regenerateKey,
+  revokeKey,
+  getComplianceTrajectory,
+  getScreeningStaleness,
+  getHalalAlternatives,
 } from './shariah.js';
 
 export const GET_SHARIAH_DESCRIPTION = `
@@ -173,6 +177,10 @@ const SHARIAH_TOOLS: StructuredToolInterface[] = [
   removeWatchlistSymbol,
   createCheckout,
   regenerateKey,
+  revokeKey,
+  getComplianceTrajectory,
+  getScreeningStaleness,
+  getHalalAlternatives,
 ];
 
 const SHARIAH_TOOL_MAP = new Map(SHARIAH_TOOLS.map((t) => [t.name, t]));
@@ -214,7 +222,7 @@ const BULK_SHARIAH_TOOLS = new Set(['screen_index_bulk', 'screen_etf_bulk']);
 const QUOTA_ERROR_RE = /\b(429|quota|quota_exceeded|too many requests|tokens_limit|tokens_used)\b/i;
 const NOT_FOUND_RE = /\b(404|not found|no cached screening found|symbol not found)\b/i;
 const FRESH_QUERY_RE = /\b(fresh|refresh|re-?screen|rerun|run now|from scratch|force refresh|latest screening|new run)\b/i;
-const EXPLICIT_MUTATION_RE = /\b(create|delete|remove|add|open checkout|upgrade|regenerate)\b/i;
+const EXPLICIT_MUTATION_RE = /\b(create|delete|remove|add|open checkout|upgrade|regenerate|revoke|kill key|disable key)\b/i;
 
 function safeParseToolPayload(rawResult: unknown): { data: unknown; sourceUrls: string[]; error: string | null } {
   try {
@@ -308,6 +316,7 @@ export function maybePreflightToolCalls(toolCalls: PlannedToolCall[], query: str
       'remove_watchlist_symbol',
       'create_checkout',
       'regenerate_key',
+      'revoke_key',
     ].includes(toolCall.name)));
     return dedupeToolCalls(result);
   }
@@ -497,8 +506,9 @@ Given a user query about Shariah compliance or Islamic finance, call the most ap
 - If a screening call returns quota or token exhaustion, stop the Shariah workflow and make the dashboard refill/upgrade action the primary response.
 - If a screening call returns unresolved coverage, symbol-not-found, or partial data, do not stop there if a cheaper fallback can clarify the situation.
 - Use bulk/index tools for index-sized workflows. Do not emulate an index screen with many single-symbol calls unless falling back after backend failure.
-- Do not choose watchlist, checkout, or key-regeneration actions unless the user explicitly asked for those side effects.
+- Do not choose watchlist, checkout, key-regeneration, or key-revocation actions unless the user explicitly asked for those side effects.
 - When backend data is incomplete, prefer returning evidence plus caveats over a confident halal/non-halal verdict.
+- Insights routing: when asked about drift, trends, "is this still safe", or staleness, call get_compliance_trajectory and get_screening_staleness in parallel. When asked for replacements/substitutes for a holding, call get_halal_alternatives. After a NON_COMPLIANT verdict on a candidate the user is researching, also call get_halal_alternatives once.
 
 ## Tool Selection Guide
 
@@ -618,10 +628,22 @@ Use ONLY when the user explicitly wants to manage watchlists.
 - "Create a halal tech watchlist with AAPL and MSFT" → create_watchlist(name="Halal Tech", symbols=["AAPL","MSFT"])
 - "Add NVDA to watchlist wl_123" → add_watchlist_symbol(watchlist_id="wl_123", symbol="NVDA")
 
-### create_checkout / regenerate_key
-Use ONLY when the user explicitly wants plan upgrades or key rotation.
+### create_checkout / regenerate_key / revoke_key
+Use ONLY when the user explicitly wants plan upgrades, key rotation, or key revocation.
 - "Open checkout for the starter plan" → create_checkout(plan="starter")
 - "Regenerate my Halal Terminal key" → regenerate_key()
+- "Revoke / kill / disable my API key" → revoke_key(confirm=true)
+
+### get_compliance_trajectory / get_screening_staleness / get_halal_alternatives
+Use for predictive compliance — drift detection, stale-screening flags, and replacement ideas.
+- "Is AAPL drifting toward non-compliance?" → run get_compliance_trajectory(symbol="AAPL") AND get_screening_staleness(symbol="AAPL") in parallel
+- "Show me the ratio trend for MSFT" → get_compliance_trajectory(symbol="MSFT")
+- "Is the NVDA screening still trustworthy?" → get_screening_staleness(symbol="NVDA")
+- "What can I replace QQQ with?" → get_halal_alternatives(symbol="QQQ")
+- "Halal alternatives to TSLA" → get_halal_alternatives(symbol="TSLA")
+- "/monitor AAPL MSFT NVDA" → for each symbol, call get_compliance_trajectory + get_screening_staleness in parallel; for any flagged or non-compliant, also call get_halal_alternatives.
+- After a screen_stock_shariah returning COMPLIANT with marginal ratios (debt-to-MC > 25% or cash-and-securities > 20%), also call get_compliance_trajectory and get_screening_staleness once.
+- After a screen_stock_shariah or scan_portfolio_shariah returning NON_COMPLIANT for a researched candidate, also call get_halal_alternatives unless the user already named replacements.
 
 ## Ticker Resolution
 Apple → AAPL, Tesla → TSLA, Microsoft → MSFT, Amazon → AMZN, Google/Alphabet → GOOGL
