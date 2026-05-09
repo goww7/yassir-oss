@@ -1,10 +1,10 @@
 <p align="center">
   <h1 align="center">Yassir</h1>
   <p align="center">
-    <strong>Open-source AI agent for financial research and Shariah-compliant investing.</strong>
+    <strong>Open-source AI agent for halal finance — predictive Shariah compliance, not just screening.</strong>
   </p>
   <p align="center">
-    Ask complex financial questions. Yassir plans the research, calls the right tools, and delivers decision-ready answers with HalalTerminal-first evidence.
+    Don't just screen. Catch compliance drift before it hits your portfolio. Yassir plans the research, calls the right HalalTerminal tools, and delivers decision-ready answers — including trajectory, staleness, and replacement insights you didn't have to ask for.
   </p>
 </p>
 
@@ -37,12 +37,27 @@
 
 ---
 
+## What's new in 2.0 — Predictive Compliance
+
+- **Insights endpoints, wired in.** Three new tools — `get_compliance_trajectory`, `get_screening_staleness`, `get_halal_alternatives` — turn Yassir from a screener into a watchdog. Surfaces ratio drift before a name flips, flags stale screens against recent SEC filings, and suggests halal replacements for non-compliant holdings.
+- **`/monitor`, `/trajectory`, `/staleness`.** New slash commands run the predictive trio across a single name, a watchlist, or an arbitrary symbol set. Single decision-grade table out: `verdict · trajectory · staleness · alternatives if needed`.
+- **Honest ETF verdicts.** When the backend exposes v2 disposition (`compliant_with_purification`, `mostly_compliant`, `non_compliant`) and scholar attestations, Yassir surfaces them with that nuance instead of forcing a boolean. ETFs still on the legacy v1 shape continue to render correctly.
+- **Honest stock verdicts.** Scholar-verified methodologies are labeled. ADR currency-mismatch abstains as `INSUFFICIENT_DATA` instead of forcing wrong answers. Insights endpoints' 200+note degradation is surfaced verbatim, not silently dropped.
+- **Self-hoster QoL.** Key usage tracking (daily burn, recent calls, projected exhaustion), key rotation, and key revocation. Two retries with exponential backoff on 429.
+- **Evidence-quality discipline in the agent prompt.** Yassir distinguishes "no data" from "non-compliant", surfaces degraded sources once at the top, and recommends `force_refresh` re-screens when staleness fires.
+
+See [`CHANGELOG.md`](CHANGELOG.md) for the full list.
+
+---
+
 ## Why Yassir?
 
 Most financial AI tools are either closed-source, limited to chat, or lack real data access. Yassir is different:
 
+- **Predictive, not just reactive** -- Catches drift toward non-compliance before a name flips, with trajectory, staleness, and alternatives insights wired into the agent's default behavior.
 - **Autonomous research** -- Ask a question, Yassir builds a plan, calls the right tools in sequence, and synthesizes a sourced answer. No manual prompt chaining.
 - **Real data, not hallucinations** -- Pulls from HalalTerminal, SEC EDGAR/open-data tools, and web search fallback. Every important claim can be grounded in tool output.
+- **Honest verdicts** -- Scholar-verified methodologies are labeled. Abstains are abstains, not silent failures. ETFs surface disposition + attestations, not boolean halal/not-halal.
 - **Shariah-first** -- Built around Shariah screening, portfolio audit, purification, watchlist monitoring, and halal replacement workflows.
 - **CLI first, web second** -- The terminal is the primary product surface. The web UI is a companion interface for the same workflows.
 - **Your LLM, your data** -- Runs locally or self-hosted. Supports OpenAI, Anthropic, Google, xAI, DeepSeek, OpenRouter, Moonshot, and Ollama.
@@ -206,28 +221,32 @@ Outputs:
 - Uncertainty and missing inputs
 - What to track next
 
-### Watchlist Monitoring
+### Predictive Watch (new in 2.0)
 
 ```text
-/monitor wl_123
-/monitor AAPL MSFT HLAL
+/monitor AAPL MSFT NVDA
+/monitor watchlist:Halal Tech
+/trajectory MSFT
+/staleness NVDA
 ```
 
 Outputs:
-- Compliance drift
-- Material events
-- Re-screen priorities
+- Single decision-grade table per symbol: verdict · trajectory direction · staleness flag · alternatives if needed
+- Compliance drift surfaced from XBRL ratio history
+- Stale-screening flags driven by recent 10-K/10-Q/8-K filings
+- Ranked halal replacements for any name flagged or already non-compliant
 
 ### Replacement Ideas
 
 ```text
+/ideas TSLA
 /ideas replace QQQ with halal alternatives
 ```
 
 Outputs:
 - Target exposure
-- Screened replacement candidates
-- Trade-offs and caveats
+- Ranked replacement candidates (via `get_halal_alternatives` for single symbols)
+- Trade-offs, methodology coverage, abstain warnings
 
 ### Guided Workflows
 
@@ -287,7 +306,9 @@ If upstream screening is unavailable:
 /bulk <index>
 /report <symbol>
 /brief <symbol>
-/monitor <watchlist|symbols...>
+/monitor <watchlist:name|symbols...>
+/trajectory <symbol>
+/staleness <symbol>
 /ideas <symbol|theme>
 /watchlist list
 /watchlist create <name>: <symbols...>

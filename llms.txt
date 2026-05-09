@@ -10,13 +10,16 @@ Primary data partner: HalalTerminal API, https://api.halalterminal.com
 
 ## What Yassir Does
 
-- Shariah stock and ETF screening
-- Portfolio compliance audits
+- Shariah stock and ETF screening (renders v2 disposition + scholar attestations when the backend exposes them)
+- Predictive compliance: ratio trajectory, screening staleness, and halal alternatives via the HalalTerminal insights endpoints
+- Portfolio compliance audits with proactive drift detection on marginal-COMPLIANT names
 - Dividend purification context
-- Halal replacement idea generation
+- Halal replacement idea generation, ranked by sector match and methodology coverage
 - SEC filing and company facts research
 - Market quotes, OHLC history, news, and asset profiles
-- Agentic research workflows using tool calls and sourced synthesis
+- Watchlist management and predictive watch (the `/monitor` workflow)
+- Self-hoster API key management: usage, daily burn, recent calls, regenerate, revoke
+- Agentic research workflows using tool calls and sourced synthesis with evidence-quality discipline
 
 ## Quickstart
 
@@ -63,8 +66,14 @@ bun run web:ui
 ## Common User Prompts
 
 - "Is AAPL Shariah-compliant? Show the full screening breakdown."
+- "Is AAPL drifting toward non-compliance?"
+- "/monitor AAPL MSFT NVDA"
+- "/monitor watchlist:Halal Tech"
+- "/trajectory MSFT"
+- "/staleness NVDA"
 - "/audit AAPL MSFT SPUS"
 - "/purification AAPL MSFT"
+- "/ideas TSLA"
 - "/ideas replace QQQ with halal alternatives"
 - "Summarize Tesla's latest 10-K risk factors."
 
