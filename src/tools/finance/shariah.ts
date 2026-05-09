@@ -16,12 +16,123 @@ import {
 } from '../../integrations/halalterminal/client.js';
 const UNRESOLVED_REASON_RE = /symbol ['"].+['"] not found in any database/i;
 
+const METHODOLOGY_NAMES: ReadonlyArray<{ key: string; label: string }> = [
+  { key: 'aaoifi', label: 'AAOIFI' },
+  { key: 'djim', label: 'DJIM' },
+  { key: 'ftse', label: 'FTSE' },
+  { key: 'msci', label: 'MSCI' },
+  { key: 'sp', label: 'S&P' },
+];
+
 function normalizeSymbol(value: string): string {
   return value.trim().toUpperCase();
 }
 
 function normalizeSymbols(values: string[]): string[] {
   return values.map(normalizeSymbol);
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+// The backend exposes per-methodology results under either `methodology_results`
+// or `by_methodology` depending on endpoint; the latter uses uppercase keys.
+function getMethodologyEntries(record: Record<string, unknown>): Record<string, unknown> | null {
+  const direct = asRecord(record.methodology_results);
+  if (direct) return direct;
+  const byMethodology = asRecord(record.by_methodology);
+  if (!byMethodology) return null;
+  const normalized: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(byMethodology)) {
+    normalized[k.toLowerCase()] = v;
+  }
+  return normalized;
+}
+
+function buildVerificationSummary(record: Record<string, unknown>): string | null {
+  const entries = getMethodologyEntries(record);
+  if (!entries) return null;
+
+  const parts: string[] = [];
+  for (const { key, label } of METHODOLOGY_NAMES) {
+    const entry = asRecord(entries[key]);
+    if (!entry) continue;
+    if (entry.verified === true) parts.push(`${label} scholar-verified`);
+    else if (entry.verified === false) parts.push(`${label} unverified`);
+  }
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+function detectInsufficientData(record: Record<string, unknown>): string | null {
+  const top = typeof record.compliance_status === 'string' ? record.compliance_status : null;
+  if (top === 'INSUFFICIENT_DATA') {
+    return (
+      (typeof record.abstain_reason === 'string' && record.abstain_reason) ||
+      (typeof record.reason === 'string' && record.reason) ||
+      'Insufficient data to render a confident verdict.'
+    );
+  }
+
+  const entries = getMethodologyEntries(record);
+  if (entries) {
+    for (const { key } of METHODOLOGY_NAMES) {
+      const entry = asRecord(entries[key]);
+      if (entry?.status === 'INSUFFICIENT_DATA') {
+        return (
+          (typeof entry.reason === 'string' && entry.reason) ||
+          'Insufficient data on at least one methodology to render a confident verdict.'
+        );
+      }
+    }
+  }
+
+  // The stock screen endpoint signals abstain via data_quality.methodologies_insufficient
+  // rather than a per-methodology status field — read it as a co-equal source.
+  const dataQuality = asRecord(record.data_quality);
+  if (dataQuality) {
+    const insufficient = Array.isArray(dataQuality.methodologies_insufficient)
+      ? (dataQuality.methodologies_insufficient as unknown[]).filter(
+          (m): m is string => typeof m === 'string',
+        )
+      : [];
+    if (insufficient.length > 0) {
+      const missingFields = Array.isArray(dataQuality.missing_fields)
+        ? (dataQuality.missing_fields as unknown[]).filter((m): m is string => typeof m === 'string')
+        : [];
+      const fieldsClause = missingFields.length > 0 ? ` (missing: ${missingFields.join(', ')})` : '';
+      if (insufficient.length >= METHODOLOGY_NAMES.length) {
+        return `All methodologies report insufficient data${fieldsClause}.`;
+      }
+      return `Insufficient data on ${insufficient.join(', ')}${fieldsClause}.`;
+    }
+  }
+
+  return null;
+}
+
+// Notes from the insights API are overloaded: a backend-failure note ("SEC XBRL
+// fetch failed: 403…") signals degradation, but a happy-path note ("Source
+// ticker is already Shariah-compliant; no alternative needed.") does not.
+// Distinguish on content rather than presence so healthy answers don't carry a
+// misleading "degraded" badge.
+const DEGRADATION_KEYWORDS = /\b(fail(?:ed|ure)?|error|unavailable|outage|forbidden|denied|timeout|unable|cannot|exceeded)\b/i;
+
+function detectDegradation(record: Record<string, unknown>): string[] {
+  if (record.degraded === true) {
+    return [typeof record.note === 'string' ? record.note : 'Backend degraded.'];
+  }
+
+  if (typeof record.note === 'string') {
+    const note = record.note.trim();
+    if (note.length > 0 && DEGRADATION_KEYWORDS.test(note)) {
+      return [note];
+    }
+  }
+
+  return [];
 }
 
 export function normalizeHalalData(data: unknown): unknown {
@@ -39,6 +150,7 @@ export function normalizeHalalData(data: unknown): unknown {
     normalized[key] = normalizeHalalData(value);
   }
 
+  // Unresolved-symbol warning (existing behavior).
   const reason = typeof normalized.business_screen_reason === 'string' ? normalized.business_screen_reason : null;
   const allMethodologiesNull = ['aaoifi_compliant', 'djim_compliant', 'ftse_compliant', 'msci_compliant', 'sp_compliant']
     .every((key) => normalized[key] == null);
@@ -53,6 +165,36 @@ export function normalizeHalalData(data: unknown): unknown {
     normalized.app_compliance_status = 'unknown';
     normalized.backend_verdict_warning =
       'Backend could not resolve this symbol. Treat the compliance verdict as unknown rather than a confirmed non-compliant decision.';
+  }
+
+  // Methodology verification summary — surfaces scholar-verified vs algorithmic-only methodologies.
+  const verificationSummary = buildVerificationSummary(normalized);
+  if (verificationSummary && !normalized.verification_summary) {
+    normalized.verification_summary = verificationSummary;
+  }
+
+  // ETF v2 cert system — disposition replaces binary pass/fail; attestations are scholar-signed strings.
+  if (typeof normalized.disposition === 'string' && !normalized.app_compliance_status) {
+    normalized.app_compliance_status = normalized.disposition;
+    normalized.is_etf = true;
+  }
+
+  // INSUFFICIENT_DATA abstain (e.g. ADR financial-currency mismatch).
+  const abstainReason = detectInsufficientData(normalized);
+  if (abstainReason && !normalized.app_compliance_status) {
+    normalized.app_compliance_status = 'abstain';
+    normalized.abstain_reason = abstainReason;
+  }
+
+  // Degradation contract — insights endpoints return 200 + note when backend deps (SEC) are flaky.
+  const degradedSources = detectDegradation(normalized);
+  if (degradedSources.length > 0) {
+    const existing = Array.isArray(normalized.degraded_sources)
+      ? (normalized.degraded_sources as unknown[]).filter(
+          (entry): entry is string => typeof entry === 'string',
+        )
+      : [];
+    normalized.degraded_sources = [...new Set([...existing, ...degradedSources])];
   }
 
   return normalized;

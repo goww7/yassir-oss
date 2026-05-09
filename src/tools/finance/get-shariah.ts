@@ -276,7 +276,11 @@ export function classifyShariahIssue(result: { data: unknown; error: string | nu
   const data = result.data;
   if (data && typeof data === 'object') {
     const record = data as Record<string, unknown>;
-    if (record.resolution_status === 'unresolved' || record.app_compliance_status === 'unknown') {
+    if (
+      record.resolution_status === 'unresolved' ||
+      record.app_compliance_status === 'unknown' ||
+      record.app_compliance_status === 'abstain'
+    ) {
       return 'unresolved';
     }
     if (Array.isArray(record.results) && record.results.length === 0) return 'empty';
