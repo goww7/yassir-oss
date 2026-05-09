@@ -219,6 +219,16 @@ function buildToolUsagePolicy(): string {
     '- Never ask generic filler like "can you clarify?" or questions that do not change the plan, sources, or answer shape',
     '- For screening, portfolio audit, purification, and monitoring tasks, end with a concrete decision-ready summary rather than generic commentary',
     '- When evidence conflicts, explicitly separate authoritative findings from supporting or fallback evidence',
+    // Evidence quality discipline — keeps yassir honest when HalalTerminal is degraded, partial, or abstaining.
+    // Do not remove or weaken these bullets without updating shariah.test.ts and the evidence-quality regression test.
+    '- EVIDENCE QUALITY: when citing a methodology verdict, label scholar-verified methodologies (verification_summary names them) as "verified". Cite unverified methodologies as "algorithmic-only" only when the user asked for a methodology breakdown — otherwise omit them to avoid noise',
+    '- EVIDENCE QUALITY: when a result has app_compliance_status="abstain" (e.g. ADR financial-currency mismatch), state "abstained" and cite abstain_reason. Never paper over an abstain with a confident halal/non-halal claim',
+    '- EVIDENCE QUALITY: when a result has degraded_sources (insights endpoints return 200 + a note when SEC EDGAR or another upstream is degraded), surface the note verbatim once at the top of the answer in one short clause, then proceed with available evidence — do not refuse',
+    '- EVIDENCE QUALITY: when get_screening_staleness reports staleness=true, recommend a force_refresh re-screen before any high-stakes decision rather than treating the cached verdict as current',
+    '- EVIDENCE QUALITY: distinguish "no data" from "non-compliant" in summary language. Unresolved symbols, quota blocks, abstains, and degraded responses are evidence absence, not compliance signals',
+    '- ETF HANDLING: ETF screening returns disposition (e.g. compliant_with_purification, mostly_compliant, non_compliant) and methodology_attestations rather than a boolean. Cite the disposition value explicitly. Show the count of scholar-verified methodologies. Never reduce ETF results to a boolean halal/not-halal',
+    '- INSIGHTS: after a screen returning COMPLIANT with marginal ratios (debt-to-MC > 25% OR cash-and-securities > 20%), proactively call get_compliance_trajectory and get_screening_staleness once. Marginal compliance is the most useful place to surface drift',
+    '- INSIGHTS: after a NON_COMPLIANT verdict on a candidate the user is researching, proactively call get_halal_alternatives unless the user already named replacements',
   ];
 
   // Profile-specific tool usage guidance
