@@ -178,4 +178,93 @@ describe('createSlashCommands', () => {
     expect(commands.some((command) => command.name === 'monitor')).toBe(true);
     expect(commands.some((command) => command.name === 'ideas')).toBe(true);
   });
+
+  test('includes predictive-compliance commands', () => {
+    const commands = createSlashCommands({
+      getRecentSymbols: () => ['MSFT'],
+      getBulkIndices: () => [],
+      getWatchlists: () => [],
+    });
+
+    expect(commands.some((command) => command.name === 'trajectory')).toBe(true);
+    expect(commands.some((command) => command.name === 'staleness')).toBe(true);
+  });
+
+  test('autocompletes recent symbols for trajectory and staleness', () => {
+    const commands = createSlashCommands({
+      getRecentSymbols: () => ['MSFT', 'ASML'],
+      getBulkIndices: () => [],
+      getWatchlists: () => [],
+    });
+    const trajectory = commands.find((c) => c.name === 'trajectory');
+    const staleness = commands.find((c) => c.name === 'staleness');
+
+    expect(trajectory?.getArgumentCompletions?.('A')).toEqual([
+      { value: 'ASML', label: 'ASML', description: 'Recent symbol' },
+    ]);
+    expect(staleness?.getArgumentCompletions?.('M')).toEqual([
+      { value: 'MSFT', label: 'MSFT', description: 'Recent symbol' },
+    ]);
+  });
+
+  test('builds /trajectory query that mentions get_compliance_trajectory', () => {
+    const result = resolveSlashCommand('/trajectory aapl', readyContext);
+
+    expect(result.kind).toBe('run');
+    if (result.kind === 'run') {
+      expect(result.query).toContain('AAPL');
+      expect(result.query).toContain('get_compliance_trajectory');
+    }
+  });
+
+  test('builds /staleness query that mentions get_screening_staleness', () => {
+    const result = resolveSlashCommand('/staleness nvda', readyContext);
+
+    expect(result.kind).toBe('run');
+    if (result.kind === 'run') {
+      expect(result.query).toContain('NVDA');
+      expect(result.query).toContain('get_screening_staleness');
+    }
+  });
+
+  test('builds /monitor query that fans out to insights tools', () => {
+    const result = resolveSlashCommand('/monitor AAPL MSFT NVDA', readyContext);
+
+    expect(result.kind).toBe('run');
+    if (result.kind === 'run') {
+      expect(result.query).toContain('get_compliance_trajectory');
+      expect(result.query).toContain('get_screening_staleness');
+      expect(result.query).toContain('get_halal_alternatives');
+      expect(result.query).toContain('AAPL, MSFT, NVDA');
+    }
+  });
+
+  test('/monitor over a watchlist routes through list_watchlists / get_watchlist', () => {
+    const result = resolveSlashCommand('/monitor watchlist:Halal Tech', readyContext);
+
+    expect(result.kind).toBe('run');
+    if (result.kind === 'run') {
+      expect(result.query).toContain('Halal Tech');
+      expect(result.query).toContain('get_watchlist');
+      expect(result.query).toContain('get_compliance_trajectory');
+    }
+  });
+
+  test('/monitor warns about token cost for >5 symbols', () => {
+    const result = resolveSlashCommand('/monitor AAPL MSFT NVDA TSLA META AMZN GOOGL', readyContext);
+
+    expect(result.kind).toBe('run');
+    if (result.kind === 'run') {
+      expect(result.query).toContain('expected total token cost');
+    }
+  });
+
+  test('/ideas with a single symbol prefers get_halal_alternatives', () => {
+    const result = resolveSlashCommand('/ideas TSLA', readyContext);
+
+    expect(result.kind).toBe('run');
+    if (result.kind === 'run') {
+      expect(result.query).toContain('get_halal_alternatives');
+    }
+  });
 });

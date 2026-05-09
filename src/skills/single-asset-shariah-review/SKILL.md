@@ -17,10 +17,12 @@ description: Reviews one stock or ETF for Shariah compliance, methodology differ
 2. Run `get_shariah` first and treat its methodology output as the authoritative compliance base.
 3. If HalalTerminal quota is blocked, stop the deep review there and tell the user to check the HalalTerminal dashboard, restore screening access, and rerun.
 4. Do not add market or financial filler after a quota block unless the user explicitly asked for a provisional fallback read.
-5. If the asset is an ETF, capture holdings, screening weight, and purification-specific caveats.
-6. Add market and financial context only after the compliance picture is clear.
-7. If methodologies disagree, explain the disagreement instead of flattening it into a fake certainty.
-8. If the symbol is unresolved or coverage is thin, say so clearly and downgrade confidence.
+5. If the asset is an ETF, surface the v2 disposition (e.g. `compliant_with_purification`, `mostly_compliant`) and any scholar attestations alongside holdings, screening weight, and purification — never reduce the ETF to a binary halal/not-halal.
+6. If the verdict is `COMPLIANT` with marginal ratios (debt-to-MC > 25% OR cash-and-securities > 20%), proactively call `get_compliance_trajectory` and `get_screening_staleness` once. Marginal compliance is the most useful place to surface drift.
+7. If the verdict is `abstain` (ADR currency mismatch or other INSUFFICIENT_DATA), explicitly state the abstain reason and never claim a halal/non-halal verdict.
+8. Add market and financial context only after the compliance picture is clear.
+9. If methodologies disagree, explain the disagreement and label scholar-verified methodologies as such — do not flatten into fake certainty.
+10. If the symbol is unresolved or coverage is thin, say so clearly and downgrade confidence.
 
 ## Output Contract
 - `Verdict`: compliant, non-compliant, mixed-methodology, or insufficient evidence

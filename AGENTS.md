@@ -61,6 +61,59 @@ bun run web:build
 - Keep user-facing errors plain and actionable.
 - Avoid broad refactors unless the task explicitly requires them.
 
+## Evidence Quality Discipline
+
+When working on response rendering, summarizers, or agent prompts, preserve
+these properties — they are what keeps Yassir honest when HalalTerminal is
+degraded, partial, or abstaining:
+
+- **Verification labeling.** When citing a methodology verdict, label
+  scholar-verified methodologies (`verification_summary` names them) as
+  "verified". Mark unverified methodologies as "algorithmic-only" only when
+  the user asked for a methodology breakdown.
+- **Abstain handling.** A result with `app_compliance_status="abstain"` (e.g.
+  ADR financial-currency mismatch → `INSUFFICIENT_DATA`) must surface
+  `abstain_reason`. Never paper over an abstain with a confident
+  halal/non-halal claim.
+- **Degraded sources.** When a result has `degraded_sources` (insights
+  endpoints return 200 + a note when SEC EDGAR or another upstream is
+  flaky), surface the note verbatim once at the top of the answer. Don't
+  refuse — proceed with available evidence.
+- **Staleness → force_refresh.** When `get_screening_staleness` reports
+  `staleness=true`, recommend a `force_refresh` re-screen before any
+  high-stakes decision rather than treating the cached verdict as current.
+- **No data ≠ non-compliant.** Unresolved symbols, quota blocks, abstains,
+  and degraded responses are evidence absence, not compliance signals.
+  Distinguish them in summary language.
+- **ETFs aren't booleans.** ETF screening returns `disposition` and
+  `methodology_attestations`, not a pass/fail verdict. Cite disposition
+  explicitly. Show the count of scholar-verified methodologies. Never
+  reduce ETF results to a boolean halal/not-halal.
+
+There is a regression test at `src/agent/evidence-quality.test.ts` that
+asserts the corresponding bullets exist in `src/agent/prompts.ts`. Update
+both together if you change the wording.
+
+## Adding a new HalalTerminal endpoint tool
+
+Canonical pattern, mirroring `src/tools/finance/shariah.ts`:
+
+1. Define a Zod input schema (use `symbolSchema`, `symbolsSchema` when
+   applicable).
+2. Wrap the endpoint with `createTool(name, description, schema, handler)`.
+   The handler returns `halalGet(...)` or `halalPost(...)` — both already
+   route responses through `normalizeHalalData`.
+3. Export the new tool from `src/tools/finance/shariah.ts`.
+4. Import it in `src/tools/finance/get-shariah.ts` and add it to the
+   `SHARIAH_TOOLS` array.
+5. Add a few-shot example in the router prompt (`buildRouterPrompt`) under
+   the closest section, with one or two natural-language → tool-call lines.
+6. If the new tool changes a workflow, update the relevant `SKILL.md` under
+   `src/skills/` and any related slash command in `cli-slash-commands.ts`.
+7. Add a small test in `src/tools/finance/get-shariah.test.ts` for the
+   planner gating (mutation-only tools must be filtered when the query is
+   not explicitly mutating).
+
 ## Security Rules
 
 - Never commit `.env`, API keys, local memory, `.agents`, `.yassir`, or generated dependency folders.

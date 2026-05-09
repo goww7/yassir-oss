@@ -209,7 +209,26 @@ export function createSlashCommands(options: {
       },
       {
         name: 'monitor',
-        description: 'Review holdings or watchlists for compliance drift and events',
+        description: 'Predictive watch — trajectory + staleness across symbols or a watchlist',
+        getArgumentCompletions(argumentPrefix) {
+          const items = buildSymbolCompletions(argumentPrefix, options.getRecentSymbols(), 'Recent symbol');
+          return items.length ? items : null;
+        },
+      },
+      {
+        name: 'trajectory',
+        description: 'Show the compliance ratio trajectory for a symbol',
+        getArgumentCompletions(argumentPrefix) {
+          if (argumentPrefix.includes(' ')) return null;
+          return toAutocompleteItems(
+            options.getRecentSymbols().filter((symbol) => symbol.startsWith(argumentPrefix.toUpperCase())),
+            'Recent symbol',
+          );
+        },
+      },
+      {
+        name: 'staleness',
+        description: 'Check whether a cached Shariah screen is outdated',
         getArgumentCompletions(argumentPrefix) {
           if (argumentPrefix.includes(' ')) return null;
           return toAutocompleteItems(
@@ -364,7 +383,9 @@ function buildHelpText(): string {
       '/bulk <index> [limit]  Run a bulk index screen like SP500 or DJIA',
       '/report <symbol>  Generate a full screening report',
       '/brief <symbol>  Generate a concise Shariah investment brief',
-      '/monitor <watchlist|symbols...>  Review holdings for drift, filings, and catalysts (`/monitor` opens the workflow)',
+      '/monitor <watchlist:name|symbols...>  Predictive watch — trajectory + staleness + alternatives across a set',
+      '/trajectory <symbol>  Compliance ratio trajectory for a single name (drift detector)',
+      '/staleness <symbol>  Is the cached screen still trustworthy? Reports recent filings and re-screen need',
       '/ideas <symbol|theme>  Suggest halal replacements or fresh ideas (`/ideas` opens the workflow)',
       '/cache <symbol>  Use cached-first lookup for a symbol or ETF',
       '/watchlist list',
@@ -396,7 +417,7 @@ function buildDoctorText(context: SlashCommandContext): string {
   if (!recommendations.length) {
     recommendations.push(
       currentProfile.vertical.features.slashCommandFamilies.shariah
-        ? 'Core Shariah investing stack looks ready. Use `/screen`, `/audit`, `/purification`, `/monitor`, and `/watchlist` to exercise the backend more deeply.'
+        ? 'Core Shariah investing stack looks ready. Use `/screen`, `/audit`, `/purification`, `/monitor`, `/trajectory`, `/staleness`, and `/watchlist` to exercise the backend more deeply.'
         : 'Core research stack looks ready. Use `/workspace`, `/attach`, `/guide`, and live research prompts to exercise the workflow more deeply.',
     );
   }
@@ -601,7 +622,7 @@ export function resolveSlashCommand(
       if (!symbols.length) return { kind: 'guide', workflowId: 'portfolio_audit' };
       return {
         kind: 'run',
-        query: `Run a full Shariah investment audit for ${symbols.join(', ')}. Include compliance status, methodology disagreement, concentration risks, unresolved names, portfolio weak points, and clear next actions.`,
+        query: `Run a full Shariah investment audit for ${symbols.join(', ')}. Include compliance status, methodology disagreement (call out scholar-verified vs algorithmic-only), concentration risks, unresolved or abstaining names, portfolio weak points, and clear next actions. After the scan, for any COMPLIANT name with marginal ratios (debt-to-MC > 25% OR cash-and-securities > 20%), also call get_compliance_trajectory and get_screening_staleness once and report the drift signal.`,
       };
     }
     case 'purification': {
@@ -675,7 +696,7 @@ export function resolveSlashCommand(
       if (!context.hasHalalBackend) return { kind: 'local', answer: buildBackendMissingText('/usage') };
       return {
         kind: 'run',
-        query: `Show my Halal Terminal API usage, current plan, token costs, daily usage, and recent requests${rest ? ` with focus on ${rest}` : ''}. Highlight quota risk and the cheapest next actions.`,
+        query: `Show my Halal Terminal API usage in detail: current plan and remaining tokens (get_key_usage), per-day burn for the last 14 days (get_daily_usage), the last 20 calls and their costs (get_recent_requests), and the token cost table (get_token_costs)${rest ? `. Focus on ${rest}` : ''}. Highlight quota risk, projected exhaustion at the current burn rate, and the cheapest next actions.`,
       };
     case 'bulk':
       if (!context.hasHalalBackend) return { kind: 'local', answer: buildBackendMissingText('/bulk') };
@@ -700,19 +721,47 @@ export function resolveSlashCommand(
         kind: 'run',
         query: `Give me an institutional brief on ${rest.toUpperCase()}. Include Shariah status, business summary, methodology differences, valuation style, key risks, and next checks.`,
       };
-    case 'monitor':
+    case 'monitor': {
       if (!context.hasHalalBackend) return { kind: 'local', answer: buildBackendMissingText('/monitor') };
       if (!rest) return { kind: 'guide', workflowId: 'watchlist_monitor' };
+      const symbols = splitSymbols(rest);
+      const watchlistMatch = rest.match(/^watchlist:\s*(\S.*)$/i);
+      if (watchlistMatch) {
+        const watchlistName = watchlistMatch[1]!.trim();
+        return {
+          kind: 'run',
+          query: `Predictive watch over watchlist "${watchlistName}". First resolve the watchlist via list_watchlists / get_watchlist. Then for each symbol in it, run get_compliance_trajectory and get_screening_staleness in parallel. For any with deteriorating ratios, recent material filings, or NON_COMPLIANT verdict, also call get_halal_alternatives. Render a single decision-grade table: symbol · current verdict · trajectory direction · staleness flag · top 3 alternatives if needed. Note the expected token consumption upfront if the watchlist has more than 5 symbols.`,
+        };
+      }
+      if (!symbols.length) return { kind: 'guide', workflowId: 'watchlist_monitor' };
+      const tokenWarning = symbols.length > 5
+        ? ' Note: this will consume ~3 insights calls per symbol; mention the expected total token cost upfront.'
+        : '';
       return {
         kind: 'run',
-        query: `Monitor ${rest}. Prioritize Shariah compliance drift, watchlist relevance, filings, earnings, and material events. Highlight what changed, what matters now for halal investors, and what should be re-screened.`,
+        query: `Predictive watch over ${symbols.join(', ')}. For each symbol, call get_compliance_trajectory and get_screening_staleness in parallel. For any with deteriorating ratios, recent material filings, or NON_COMPLIANT verdict, also call get_halal_alternatives. Render a single decision-grade table: symbol · current verdict · trajectory direction · staleness flag · top 3 alternatives if needed.${tokenWarning}`,
+      };
+    }
+    case 'trajectory':
+      if (!context.hasHalalBackend) return { kind: 'local', answer: buildBackendMissingText('/trajectory') };
+      if (!rest) return { kind: 'insert', text: '/trajectory AAPL' };
+      return {
+        kind: 'run',
+        query: `Show the compliance ratio trajectory for ${rest.toUpperCase()} via get_compliance_trajectory. Render the trend (improving, stable, or deteriorating) for debt-to-MC, cash-and-securities, and non-compliant income, and call out any single quarter that breaches a methodology threshold.`,
+      };
+    case 'staleness':
+      if (!context.hasHalalBackend) return { kind: 'local', answer: buildBackendMissingText('/staleness') };
+      if (!rest) return { kind: 'insert', text: '/staleness AAPL' };
+      return {
+        kind: 'run',
+        query: `Check whether the cached Shariah screen for ${rest.toUpperCase()} is still trustworthy via get_screening_staleness. Report screen age, last-screen date, any material SEC filings since then (10-K, 10-Q, 8-K), and a clear re-screen recommendation.`,
       };
     case 'ideas':
       if (!context.hasHalalBackend) return { kind: 'local', answer: buildBackendMissingText('/ideas') };
       if (!rest) return { kind: 'guide', workflowId: 'replacement_ideas' };
       return {
         kind: 'run',
-        query: `Generate halal investing ideas for: ${rest}. Prefer Shariah-compliant stocks and ETFs, explain why they fit, and include screening or methodology caveats before suggesting them.`,
+        query: `Generate halal investing ideas for: ${rest}. If the input looks like a single symbol, call get_halal_alternatives first to lean on the backend's ranked, compliance-aware substitutes; otherwise route to search_halal_database. Explain why each fits, include screening or methodology caveats, and label any alternatives that abstain or have non-verified methodology coverage.`,
       };
     case 'cache':
       if (!context.hasHalalBackend) return { kind: 'local', answer: buildBackendMissingText('/cache') };
