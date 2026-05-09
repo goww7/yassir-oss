@@ -70,6 +70,16 @@ async function parseErrorBody(response: Response): Promise<string> {
   }
 }
 
+// Two retries with linear-then-exponential backoff. 429 is the only retryable
+// status because the backend treats it as soft rate-limit and recovers within
+// a second. 5xx is left untouched because surfacing it lets the agent's
+// fallback logic kick in faster than a retry loop would.
+const RETRY_DELAYS_MS = [250, 500] as const;
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function apiRequest(
   method: 'GET' | 'POST' | 'DELETE',
   path: string,
@@ -81,24 +91,46 @@ async function apiRequest(
   }
 
   const url = buildApiUrl(path, options.params);
-  let response: Response;
-  try {
-    response = await fetch(url.toString(), {
-      method,
-      headers: {
-        ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-        ...(resolvedKey ? { 'X-API-Key': resolvedKey } : {}),
-      },
-      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
-    });
-  } catch (error) {
-    throw new Error(`[Halal Terminal API] network error: ${error instanceof Error ? error.message : String(error)}`);
+  let response: Response | null = null;
+
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      response = await fetch(url.toString(), {
+        method,
+        headers: {
+          ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          ...(resolvedKey ? { 'X-API-Key': resolvedKey } : {}),
+        },
+        ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+      });
+    } catch (error) {
+      throw new Error(
+        `[Halal Terminal API] network error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    if (response.status !== 429 || attempt >= RETRY_DELAYS_MS.length) {
+      break;
+    }
+    const delayMs = RETRY_DELAYS_MS[attempt]!;
+    logger.debug(
+      `[Halal Terminal API] 429 on ${path}, retry ${attempt + 1}/${RETRY_DELAYS_MS.length} after ${delayMs}ms`,
+    );
+    await sleep(delayMs);
+  }
+
+  if (!response) {
+    throw new Error(`[Halal Terminal API] no response for ${path}`);
   }
 
   if (!response.ok) {
     const detail = await parseErrorBody(response);
+    const hint =
+      response.status === 429
+        ? ' — consider running get_key_usage to check quota'
+        : '';
     throw new Error(
-      `[Halal Terminal API] ${response.status} ${response.statusText} — ${path}${detail ? ` — ${detail}` : ''}`,
+      `[Halal Terminal API] ${response.status} ${response.statusText} — ${path}${detail ? ` — ${detail}` : ''}${hint}`,
     );
   }
 
