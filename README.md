@@ -13,7 +13,7 @@
   <a href="https://bun.sh"><img src="https://img.shields.io/badge/runtime-Bun-f472b6?logo=bun&logoColor=white" alt="Bun"></a>
   <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" alt="TypeScript"></a>
   <a href="https://hub.docker.com"><img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker"></a>
-  <a href="https://api.halalterminal.com"><img src="https://img.shields.io/badge/HalalTerminal-API-10b981" alt="HalalTerminal"></a>
+  <a href="https://halalterminal.com"><img src="https://img.shields.io/badge/HalalTerminal-API-10b981" alt="HalalTerminal"></a>
 </p>
 
 <p align="center">
@@ -263,7 +263,7 @@ Available flows:
 
 ## Shariah Screening
 
-Yassir is powered by [HalalTerminal](https://api.halalterminal.com) for Shariah compliance data and Islamic finance workflows.
+Yassir is powered by [HalalTerminal](https://halalterminal.com) for Shariah compliance data and Islamic finance workflows.
 
 **Get your API key** at **[api.halalterminal.com](https://api.halalterminal.com)**.
 
@@ -436,6 +436,7 @@ Other open-source tools in the HalalTerminal ecosystem — same API, different s
 | [**halal-discord-bot**](https://github.com/goww7/halal-discord-bot) | Discord bot — `/halal AAPL`, `/portfolio`, `/trending` slash commands for Shariah-compliant screening | MIT |
 | [**halal-portfolio-tracker**](https://github.com/goww7/halal-portfolio-tracker) | Next.js 14 app — enter your holdings, get per-stock compliance + portfolio halal % + purification owed. One-click Vercel deploy. | MIT |
 | [**halal-pine**](https://github.com/goww7/halal-pine) | TradingView Pine Script v5 indicator that overlays compliance status on charts. Refreshed daily from the API. | MIT |
+| [**halalterminal-mcp**](https://github.com/goww7/halalterminal-mcp) | MCP server — connect Cursor, Cline, Codex, or any MCP-compatible client to the HalalTerminal API. | Apache-2.0 |
 | [**halalterminal-claude-skills**](https://github.com/goww7/halalterminal-claude-skills) | Claude Code plugin — Shariah screening skills usable directly from your terminal AI. | MIT |
 
 ## License
@@ -445,5 +446,5 @@ Other open-source tools in the HalalTerminal ecosystem — same API, different s
 ---
 
 <p align="center">
-  Built with <a href="https://api.halalterminal.com">HalalTerminal</a>
+  Built with <a href="https://halalterminal.com">HalalTerminal</a>
 </p>
