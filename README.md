@@ -427,6 +427,18 @@ bun run web:build
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Learn more
+
+- [Research library](https://www.halalterminal.com/research)
+- [Halal Terminal blog](https://www.halalterminal.com/blog)
+- [What is Islamic finance?](https://www.halalterminal.com/research/what-is-islamic-finance)
+- [Sukuk screening guide](https://www.halalterminal.com/research/sukuk-screening)
+- [API reference](https://api.halalterminal.com/api-reference)
+
+## Part of the Halal Terminal ecosystem
+
+[Website](https://www.halalterminal.com) · [API](https://api.halalterminal.com/api-reference) · [Python SDK](https://github.com/goww7/halalterminal-sdk-python) · [JS SDK](https://github.com/goww7/halalterminal-sdk-js) · [MCP server](https://github.com/goww7/halalterminal-mcp) · [Claude plugin](https://github.com/goww7/halalterminal-claude-skills) · [Discord bot](https://github.com/goww7/halal-discord-bot) · [TradingView indicator](https://github.com/goww7/halal-pine) · [Portfolio tracker](https://github.com/goww7/halal-portfolio-tracker)
+
 ## Related projects
 
 Other open-source tools in the HalalTerminal ecosystem — same API, different surfaces:
