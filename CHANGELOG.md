@@ -4,6 +4,31 @@ All notable changes to Yassir are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), with date-based
 versioning aligned to the release tag (`vYYYY.M.D`).
 
+## [2026.6.2] — Set it and forget it
+
+### Added
+
+- **`yassir watch` — autonomous compliance monitoring.** A daemon that
+  re-screens a set of holdings (or a `watchlist:<name>`) on a schedule and
+  alerts when a name's Shariah verdict changes: `flipped_out` (no longer
+  compliant), `flipped_in`, `became_unknown`, `resolved`. Deterministic verdict
+  fetch via the Halal Terminal client (no LLM in the loop), persisted state to
+  detect changes across restarts, optional `--webhook`, `--once` for cron, and a
+  Ctrl-C-responsive interval loop. Warns if `HALAL_TERMINAL_API_KEY` is unset.
+- **Sukuk tools + skill.** `search_sukuk` (faceted: issuer / country / structure
+  / currency / maturity), `get_sukuk` (by ISIN), `get_sukuk_issuer` (by LEI),
+  routed through `get_shariah`, plus a `sukuk-screening` skill with a non-fatwa
+  honesty contract.
+- **`zakat-calculation` skill.** A first-class, guided zakat workflow over the
+  existing `calculate_zakat` capability (shares→value resolution, nisab, ~2.5%
+  due, excluded-on-unresolved).
+
+### Notes
+
+- The watch loop intentionally avoids the LLM: monitoring is mechanical
+  (screen → compare → alert), so it stays deterministic and cheap. Use the
+  interactive agent for analysis, `watch` for always-on drift detection.
+
 ## [2026.5.9] — Predictive Compliance
 
 Don't just screen. Catch compliance drift before it hits your portfolio.

@@ -37,6 +37,16 @@
 
 ---
 
+## What's new in 3.0 — Set it and forget it
+
+- **`yassir watch` — autonomous compliance monitoring.** Point it at your holdings or a watchlist and it re-screens them on a schedule and **alerts you when a name drifts out of compliance** — flip-out, flip-in, gone-indeterminate, or newly-resolved. No LLM in the loop (deterministic + cheap), persisted state so it detects changes across restarts, optional `--webhook`, and `--once` for cron.
+  ```bash
+  yassir watch AAPL,MSFT,NVDA --interval 360            # every 6h
+  yassir watch watchlist:"Halal Tech" --once --webhook https://… # one-shot + push
+  ```
+- **Sukuk, wired in.** Search and look up sukuk (Islamic fixed income / "halal bonds") by issuer, country, structure (ijara/murabaha/wakala/…), currency, ISIN, or issuer LEI — plus a `sukuk-screening` skill.
+- **Zakat, first-class.** A guided `zakat-calculation` skill: shares→value resolution, nisab, ~2.5% due, with a non-fatwa honesty contract.
+
 ## What's new in 2.0 — Predictive Compliance
 
 - **Insights endpoints, wired in.** Three new tools — `get_compliance_trajectory`, `get_screening_staleness`, `get_halal_alternatives` — turn Yassir from a screener into a watchdog. Surfaces ratio drift before a name flips, flags stale screens against recent SEC filings, and suggests halal replacements for non-compliant holdings.
