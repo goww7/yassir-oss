@@ -78,6 +78,9 @@ import {
   getComplianceTrajectory,
   getScreeningStaleness,
   getHalalAlternatives,
+  searchSukuk,
+  getSukuk,
+  getSukukIssuer,
 } from './shariah.js';
 
 export const GET_SHARIAH_DESCRIPTION = `
@@ -91,6 +94,7 @@ Intelligent meta-tool for Islamic finance and Shariah compliance queries. Routes
 - Screening ETFs for Shariah compliance (e.g. "Is QQQ halal?", "Screen SPY ETF")
 - Comparing ETFs by halal compliance (e.g. "Which is more halal: HLAL or SPUS?")
 - Calculating zakat on a stock portfolio
+- Searching or looking up sukuk (Islamic fixed income / "halal bonds") by issuer, country, structure, currency, ISIN, or issuer LEI
 - Calculating dividend purification (cleansing) amounts
 - Reading dividend history, SEC filing metadata, or XBRL facts from Halal Terminal
 - Getting Islamic finance news or news about a specific halal stock
@@ -181,6 +185,9 @@ const SHARIAH_TOOLS: StructuredToolInterface[] = [
   getComplianceTrajectory,
   getScreeningStaleness,
   getHalalAlternatives,
+  searchSukuk,
+  getSukuk,
+  getSukukIssuer,
 ];
 
 const SHARIAH_TOOL_MAP = new Map(SHARIAH_TOOLS.map((t) => [t.name, t]));

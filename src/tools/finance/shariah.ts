@@ -507,6 +507,46 @@ export const getResultsUpdates = createTool(
   async (input) => halalGet('/api/results/updates', { since: input.since, run_id: input.run_id }),
 );
 
+// --- Sukuk (Islamic fixed income) ---
+
+export const searchSukuk = createTool(
+  'search_sukuk',
+  'Search the sukuk (Islamic fixed-income / "halal bonds") database by issuer, country, structure (e.g. ijara, murabaha, wakala, mudaraba), currency, or maturity window. Use to find sukuk or build a sukuk shortlist.',
+  z.object({
+    issuer: z.string().optional().describe('Issuer name to filter by.'),
+    country: z.string().optional().describe('Issuer country.'),
+    structure: z.string().optional().describe('Sukuk structure, e.g. ijara, murabaha, wakala, mudaraba.'),
+    currency: z.string().optional().describe('Currency code, e.g. USD, SAR, MYR.'),
+    maturity_from: z.string().optional().describe('Earliest maturity (ISO date).'),
+    maturity_to: z.string().optional().describe('Latest maturity (ISO date).'),
+    limit: z.number().int().positive().optional().default(20),
+  }),
+  async (input) =>
+    halalGet('/api/sukuk/search', {
+      issuer: input.issuer,
+      country: input.country,
+      structure: input.structure,
+      currency: input.currency,
+      maturity_from: input.maturity_from,
+      maturity_to: input.maturity_to,
+      limit: input.limit,
+    }),
+);
+
+export const getSukuk = createTool(
+  'get_sukuk',
+  'Get a single sukuk instrument by ISIN — structure, issuer, profit rate, maturity, and Shariah-compliance details.',
+  z.object({ isin: z.string().describe('The sukuk ISIN, e.g. XS1234567890.') }),
+  async (input) => halalGet(`/api/sukuk/${encodeURIComponent(input.isin.trim().toUpperCase())}`),
+);
+
+export const getSukukIssuer = createTool(
+  'get_sukuk_issuer',
+  'Get an issuer profile and its sukuk programme by LEI (Legal Entity Identifier).',
+  z.object({ lei: z.string().describe('Issuer Legal Entity Identifier (LEI).') }),
+  async (input) => halalGet(`/api/sukuk/issuer/${encodeURIComponent(input.lei.trim().toUpperCase())}`),
+);
+
 export const getBulkIndices = createTool(
   'get_bulk_indices',
   'List supported stock indices for asynchronous bulk Shariah screening.',
