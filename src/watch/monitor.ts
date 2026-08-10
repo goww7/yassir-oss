@@ -78,16 +78,24 @@ export async function runOnce(symbols: string[], opts: WatchOptions): Promise<Ru
 if (opts.json) {
   console.log(formatJsonOutput(symbols, changes));
 }
-    const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
-    if (alerts.length === 0) {
-      console.log(`[${stamp}] ✅ ${Object.keys(verdicts).length} watched — no compliance changes.`);
-    } else {
-      console.log(`[${stamp}] ⚠️  ${alerts.length} compliance change(s):`);
-      for (const c of alerts) console.log(`   ${formatChange(c)}`);
-    }
-   if (alerts.length && opts.webhook) {
-    await sendWebhook(opts.webhook, alerts);
+
+if (!opts.quiet && !opts.json) {
+  const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+  if (alerts.length === 0) {
+    console.log(
+      `[${stamp}] ✅ ${Object.keys(verdicts).length} watched — no compliance changes.`,
+    );
+  } else {
+    console.log(`[${stamp}] ⚠️  ${alerts.length} compliance change(s):`);
+    for (const c of alerts) console.log(`   ${formatChange(c)}`);
   }
+}
+
+if (alerts.length && opts.webhook) {
+  await sendWebhook(opts.webhook, alerts);
+}
+
   saveState(opts.statePath, { ...prev, ...verdicts });
   return { verdicts, changes, alerts };
 }
