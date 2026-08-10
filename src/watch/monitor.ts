@@ -50,6 +50,7 @@ export interface WatchOptions {
   forceRefresh?: boolean;
   webhook?: string;
   quiet?: boolean;
+  json?: boolean;
 }
 
 export interface RunOnceResult {
@@ -58,13 +59,25 @@ export interface RunOnceResult {
   alerts: Change[];
 }
 
+
+export function formatJsonOutput(symbols: string[], changes: Change[]): string {
+  return JSON.stringify({
+    ts: new Date().toISOString(),
+    symbols,
+    changes,
+    errors: [],
+  });
+}
+
 export async function runOnce(symbols: string[], opts: WatchOptions): Promise<RunOnceResult> {
   const prev = loadState(opts.statePath);
   const verdicts = await fetchVerdicts(symbols, { forceRefresh: opts.forceRefresh });
   const changes = diffVerdicts(prev, verdicts);
   const alerts = alertableChanges(changes, false);
 
-  if (!opts.quiet) {
+if (opts.json) {
+  console.log(formatJsonOutput(symbols, changes));
+}
     const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
     if (alerts.length === 0) {
       console.log(`[${stamp}] ✅ ${Object.keys(verdicts).length} watched — no compliance changes.`);
@@ -72,9 +85,9 @@ export async function runOnce(symbols: string[], opts: WatchOptions): Promise<Ru
       console.log(`[${stamp}] ⚠️  ${alerts.length} compliance change(s):`);
       for (const c of alerts) console.log(`   ${formatChange(c)}`);
     }
+   if (alerts.length && opts.webhook) {
+    await sendWebhook(opts.webhook, alerts);
   }
-
-  if (alerts.length && opts.webhook) await sendWebhook(opts.webhook, alerts);
   saveState(opts.statePath, { ...prev, ...verdicts });
   return { verdicts, changes, alerts };
 }
@@ -91,14 +104,18 @@ export async function runWatch(
   let stop = false;
   const onSig = () => {
     stop = true;
-    console.log('\nstopping watch…');
+    if (!opts.json) {
+  console.log('\nstopping watch…');
+}
   };
   process.on('SIGINT', onSig);
   process.on('SIGTERM', onSig);
 
+ if (!opts.json) {
   console.log(
     `Watching ${symbols.length} symbol(s) every ${Math.round(intervalMs / 60000)} min. Ctrl-C to stop.`,
   );
+}
   while (!stop) {
     try {
       await runOnce(symbols, opts);

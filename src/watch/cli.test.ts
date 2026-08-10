@@ -13,11 +13,13 @@ describe('parseWatchArgs', () => {
     expect(r.intervalMs).toBe(360 * 60_000);
     expect(r.once).toBe(false);
     expect(r.statePath).toContain('watch-state.json');
+    expect(r.json).toBe(false);
   });
 
-  test('parses flags: --once --interval --webhook --force', () => {
-    const r = ok(parseWatchArgs(['NVDA', '--once', '--interval', '30', '--webhook', 'https://x.test/hook', '--force']));
+  test('parses flags: --once --interval --webhook --force --json', () => {
+    const r = ok(parseWatchArgs(['NVDA', '--once', '--interval', '30', '--webhook', 'https://x.test/hook', '--force','--json']));
     expect(r.once).toBe(true);
+    expect(r.json).toBe(true);
     expect(r.intervalMs).toBe(30 * 60_000);
     expect(r.webhook).toBe('https://x.test/hook');
     expect(r.forceRefresh).toBe(true);

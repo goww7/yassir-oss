@@ -12,6 +12,7 @@ export interface ParsedWatch {
   once: boolean;
   forceRefresh: boolean;
   webhook?: string;
+  json: boolean;
   statePath: string;
 }
 
@@ -22,11 +23,13 @@ export function parseWatchArgs(argv: string[]): ParsedWatch | { error: string } 
   let once = false;
   let forceRefresh = false;
   let webhook: string | undefined;
+  let json = false;
   let statePath = join(process.cwd(), '.yassir', 'watch-state.json');
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (a === '--once') once = true;
+    else if (a === '--json') json = true;
     else if (a === '--force' || a === '--refresh') forceRefresh = true;
     else if (a === '--interval') intervalMin = Number(argv[++i]);
     else if (a === '--webhook') webhook = argv[++i];
@@ -53,6 +56,7 @@ export function parseWatchArgs(argv: string[]): ParsedWatch | { error: string } 
     once,
     forceRefresh,
     webhook,
+    json,
     statePath,
   };
 }
@@ -70,12 +74,14 @@ async function resolveWatchlistSymbols(name: string): Promise<string[]> {
 
 export async function runWatchCommand(argv: string[]): Promise<void> {
   const parsed = parseWatchArgs(argv);
-  if ('error' in parsed) {
-    console.error(`yassir watch: ${parsed.error}`);
-    console.error('usage: yassir watch <SYMBOLS|watchlist:NAME> [--once] [--interval MIN] [--webhook URL] [--force]');
-    process.exitCode = 2;
-    return;
-  }
+if ('error' in parsed) {
+  console.error(`yassir watch: ${parsed.error}`);
+  console.error(
+    'usage: yassir watch <SYMBOLS|watchlist:NAME> [--once] [--json] [--interval MIN] [--webhook URL] [--force]',
+  );
+  process.exitCode = 2;
+  return;
+}
 
   if (!getHalalTerminalApiKey()) {
     console.error('yassir watch: HALAL_TERMINAL_API_KEY is not set — get a free key at https://halalterminal.com and export it.');
@@ -104,6 +110,7 @@ export async function runWatchCommand(argv: string[]): Promise<void> {
     statePath: parsed.statePath,
     forceRefresh: parsed.forceRefresh,
     webhook: parsed.webhook,
+    json: parsed.json,
   };
 
   if (parsed.once) {
