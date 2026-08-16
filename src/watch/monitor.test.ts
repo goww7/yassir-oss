@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { formatJsonOutput, parseVerdict } from './monitor.js';
+import { buildWebhookPayload, formatJsonOutput, parseVerdict } from './monitor.js';
 
 describe('parseVerdict', () => {
   test('reads a boolean compliance verdict', () => {
@@ -29,5 +29,50 @@ describe('parseVerdict', () => {
     expect(parseVerdict({ is_compliant: 'yes' })).toEqual({ is_compliant: null });
     expect(parseVerdict(null)).toEqual({ is_compliant: null });
     expect(parseVerdict('nope')).toEqual({ is_compliant: null });
+  });
+});
+describe('buildWebhookPayload', () => {
+const changes = [
+  {
+    symbol: 'AAPL',
+    kind: 'flipped_out',
+    from: true,
+    to: false,
+  },
+] as const;
+  test('formats Discord webhooks with content', () => {
+    const payload = buildWebhookPayload(
+      'https://discord.com/api/webhooks/123/test',
+      [...changes],
+    );
+
+    expect(payload).toEqual({
+      content: expect.stringContaining('AAPL'),
+    });
+  });
+
+  test('formats Slack webhooks with text', () => {
+    const payload = buildWebhookPayload(
+      'https://hooks.slack.com/services/T/B/X',
+      [...changes],
+    );
+
+    expect(payload).toEqual({
+      text: expect.stringContaining('AAPL'),
+    });
+  });
+
+  test('keeps generic webhook payload unchanged', () => {
+    const payload = buildWebhookPayload(
+      'https://example.com/webhook',
+      [...changes],
+    );
+
+    expect(payload).toMatchObject({
+      source: 'yassir-watch',
+      changes: [...changes],
+    });
+
+    expect(typeof (payload as { at?: unknown }).at).toBe('string');
   });
 });

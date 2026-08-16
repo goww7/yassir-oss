@@ -32,13 +32,30 @@ export async function fetchVerdicts(
   }
   return out;
 }
+export function buildWebhookPayload(url: string, changes: Change[]) {
+  const message = changes.map(formatChange).join('\n');
+
+  if (url.includes('discord.com/api/webhooks/')) {
+    return { content: message };
+  }
+
+  if (url.includes('hooks.slack.com/')) {
+    return { text: message };
+  }
+
+  return {
+    source: 'yassir-watch',
+    at: new Date().toISOString(),
+    changes,
+  };
+}
 
 async function sendWebhook(url: string, changes: Change[]): Promise<void> {
   try {
     await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ source: 'yassir-watch', at: new Date().toISOString(), changes }),
+      body: JSON.stringify(buildWebhookPayload(url, changes)),
     });
   } catch {
     /* best-effort; never crash the daemon on a webhook failure */
