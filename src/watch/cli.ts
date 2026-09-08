@@ -1,7 +1,11 @@
 /** `yassir watch` command: parse args, resolve symbols, run once or loop. */
 import { join } from 'path';
 import { getHalalTerminalApiKey, halalTerminalGet } from '../integrations/halalterminal/client.js';
+import type { WebhookFormat } from './alert.js';
 import { runOnce, runWatch, type WatchOptions } from './monitor.js';
+
+//allowed "raw" format as well, which is just a generic format flag not actually required for raw webhooks, but can be used to override auto-detection of discord/slack
+const WEBHOOK_FORMATS: WebhookFormat[] = ['discord', 'slack', 'raw'];
 
 const DEFAULT_INTERVAL_MIN = 360; // 6h
 
@@ -12,6 +16,7 @@ export interface ParsedWatch {
   once: boolean;
   forceRefresh: boolean;
   webhook?: string;
+  webhookFormat?: WebhookFormat;
   json: boolean;
   statePath: string;
 }
@@ -23,6 +28,7 @@ export function parseWatchArgs(argv: string[]): ParsedWatch | { error: string } 
   let once = false;
   let forceRefresh = false;
   let webhook: string | undefined;
+  let webhookFormat: WebhookFormat | undefined;
   let json = false;
   let statePath = join(process.cwd(), '.yassir', 'watch-state.json');
 
@@ -33,6 +39,11 @@ export function parseWatchArgs(argv: string[]): ParsedWatch | { error: string } 
     else if (a === '--force' || a === '--refresh') forceRefresh = true;
     else if (a === '--interval') intervalMin = Number(argv[++i]);
     else if (a === '--webhook') webhook = argv[++i];
+    else if (a === '--format') {
+      const value = argv[++i];
+      if (value === undefined) return { error: '--format requires a value' };
+      webhookFormat = value as WebhookFormat;
+    }
     else if (a === '--state') statePath = argv[++i]!;
     else if (a.startsWith('watchlist:')) watchlist = a.slice('watchlist:'.length).trim();
     else if (a.startsWith('--')) return { error: `unknown flag: ${a}` };
@@ -48,6 +59,9 @@ export function parseWatchArgs(argv: string[]): ParsedWatch | { error: string } 
   if (webhook !== undefined && !/^https?:\/\//.test(webhook)) {
     return { error: '--webhook must be an http(s) URL' };
   }
+  if (webhookFormat !== undefined && !WEBHOOK_FORMATS.includes(webhookFormat)) {
+    return { error: `--format must be one of: ${WEBHOOK_FORMATS.join(', ')}` };
+  }
 
   return {
     symbols,
@@ -56,6 +70,7 @@ export function parseWatchArgs(argv: string[]): ParsedWatch | { error: string } 
     once,
     forceRefresh,
     webhook,
+    webhookFormat,
     json,
     statePath,
   };
@@ -77,7 +92,7 @@ export async function runWatchCommand(argv: string[]): Promise<void> {
   if ('error' in parsed) {
     console.error(`yassir watch: ${parsed.error}`);
     console.error(
-      'usage: yassir watch <SYMBOLS|watchlist:NAME> [--once] [--json] [--interval MIN] [--webhook URL] [--force]',
+      'usage: yassir watch <SYMBOLS|watchlist:NAME> [--once] [--json] [--interval MIN] [--webhook URL] [--format discord|slack|raw] [--force]',
     );
     process.exitCode = 2;
     return;
@@ -110,6 +125,7 @@ export async function runWatchCommand(argv: string[]): Promise<void> {
     statePath: parsed.statePath,
     forceRefresh: parsed.forceRefresh,
     webhook: parsed.webhook,
+    webhookFormat: parsed.webhookFormat,
     json: parsed.json,
   };
 

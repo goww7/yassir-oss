@@ -38,4 +38,16 @@ describe('parseWatchArgs', () => {
     expect('error' in parseWatchArgs(['AAPL', '--webhook', 'ftp://x'])).toBe(true);
     expect('error' in parseWatchArgs(['AAPL', '--interval', '0'])).toBe(true);
   });
+
+  test('parses --format and rejects an invalid value', () => {
+    const r = ok(parseWatchArgs(['AAPL', '--webhook', 'https://x.test/hook', '--format', 'slack']));
+    expect(r.webhookFormat).toBe('slack');
+    expect(parseWatchArgs(['AAPL', '--format', 'teams'])).toEqual({
+      error: expect.stringContaining('--format must be one of'),
+    });
+  });
+
+  test('errors instead of silently ignoring a trailing --format with no value', () => {
+    expect(parseWatchArgs(['AAPL', '--format'])).toEqual({ error: '--format requires a value' });
+  });
 });
